@@ -1,23 +1,24 @@
 [package]
-name = "rtop_util"
+name = "rtpm"
 version = "0.0.1"
+authors = ["Rtop Development Team"]
 edition = "2021"
-description = "The official tool to simplify the management of plugins for RTop."
-repository = "https://github.com/RtopRS/RtopUtil"
+description = "The official tool to simplify the management of plugins for Rtop."
+repository = "https://github.com/RtopRS/RtopPluginManager"
 readme = "README.md"
 license = "MPL-2.0"
 
 [profile.release]
 codegen-units = 1
 panic = "abort"
-debug = false
-opt-level = 3
+opt-level = "z"
 strip = true
 lto = true
 
 [dependencies]
 reqwest = { version = "0.11", features = ["blocking", "json"] }
 serde = { version = "1.0", features = ["derive"] }
+itertools = "0.10"
 serde_json = "1.0"
 colored = "2.0"
 cargo = "0.64"

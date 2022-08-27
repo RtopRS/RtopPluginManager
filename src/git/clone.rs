@@ -1,3 +1,5 @@
+// Code based on the git2-rs example available on the URL: https://github.com/rust-lang/git2-rs/blob/master/examples/clone.rs.
+
 use crate::util::utils::convert_to_readable_unity;
 use colored::*;
 use git2::build::{CheckoutBuilder, RepoBuilder};

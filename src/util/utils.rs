@@ -1,4 +1,6 @@
+use colored::*;
 use std::path::PathBuf;
+use url::Url;
 
 // Based on the human_bytes library of Forkbomb9: https://gitlab.com/forkbomb9/human_bytes-rs
 pub fn convert_to_readable_unity<T: Into<f64>>(size: T) -> String {
@@ -30,7 +32,6 @@ pub fn build_cargo_project(toml_path: PathBuf) {
 }
 
 pub fn remove_plugin(path_to_remove: PathBuf, rtop_config: PathBuf) {
-    use colored::*;
     println!(
         ":: {}",
         format!(
@@ -46,4 +47,39 @@ pub fn remove_plugin(path_to_remove: PathBuf, rtop_config: PathBuf) {
     std::fs::remove_dir_all(path_to_remove).unwrap();
     println!(":: {}", "Cleaning finished, program exit...".green());
     std::process::exit(0);
+}
+
+pub fn get_raw_url(url: Url) -> Option<Url> {
+    let url_host: &str = url.host_str().unwrap();
+    let url_path: &str = url.path();
+    let url_split: Vec<String> = url_path
+        .split('/')
+        .filter(|&s| !s.is_empty())
+        .collect::<Vec<&str>>()
+        .into_iter()
+        .map(|s| s.to_owned())
+        .collect();
+
+    match url_host {
+        "github.com" => Option::from(
+            Url::parse(&*format!(
+                "https://raw.githubusercontent.com/{}/{}/main/",
+                url_split[0].clone(),
+                url_split[1].clone()
+            ))
+            .unwrap(),
+        ),
+        "gitlab.com" => Option::from(
+            Url::parse(&*format!(
+                "https://gitlab.com/{}/{}/-/raw/main/",
+                url_split[0].clone(),
+                url_split[1].clone()
+            ))
+            .unwrap(),
+        ),
+        _ => {
+            println!(":: {}", "Currently, only GitHub and GitLab are supported for external plugins. You can open an issue on: https://github.com/RtopRS/RtopUtil/issues/new so I can add another site.".bold().red());
+            None
+        }
+    }
 }
