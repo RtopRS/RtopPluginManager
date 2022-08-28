@@ -17,6 +17,7 @@ pub struct PluginManifest {
 
 #[derive(Debug, Deserialize)]
 pub struct RepositoryManifest {
+    pub(crate) id: String,
     pub(crate) name: String,
     pub(crate) description: String,
     pub(crate) url: String,

@@ -5,8 +5,8 @@ use colored::*;
 use itertools::Itertools;
 use std::path::PathBuf;
 
-pub fn search(sub_matches: ArgMatches) {
-    let plugins: Vec<String> = sub_matches
+pub fn search(matches: ArgMatches) {
+    let plugins: Vec<String> = matches
         .get_many::<String>("plugins")
         .unwrap_or_else(|| {
             println!(

@@ -3,7 +3,7 @@ use crate::git::update_repositories::update_repositories;
 use crate::util::structs::{
     PluginManifest, RTPMConfig, RTPMConfigPluginElement, RtopConfig, RtopConfigPlugins,
 };
-use crate::util::utils::{build_cargo_project, get_raw_url, remove_plugin, search_plugin};
+use crate::util::utils::{build_cargo_project, get_raw_url, save_json_to_file, search_plugin};
 use clap::ArgMatches;
 use colored::*;
 use itertools::Itertools;
@@ -11,6 +11,24 @@ use std::fs::ReadDir;
 use std::io::Write;
 use std::path::PathBuf;
 use url::Url;
+
+fn remove_plugin(path_to_remove: PathBuf, rtop_config: PathBuf) {
+    println!(
+        ":: {}",
+        format!(
+            "The Rtop config file: {} does not exist, you must launch Rtop before using RtopUtil.",
+            rtop_config.into_os_string().into_string().unwrap()
+        )
+        .red()
+    );
+    println!(
+        ":: {}",
+        "Cleaning the previously installed plugin...".green()
+    );
+    std::fs::remove_dir_all(path_to_remove).unwrap();
+    println!(":: {}", "Cleaning finished, program exit...".green());
+    std::process::exit(0);
+}
 
 fn install_plugin(plugin_manifest: PluginManifest) -> bool {
     let plugin_repository_path: PathBuf = dirs::data_dir()
@@ -86,16 +104,7 @@ fn install_plugin(plugin_manifest: PluginManifest) -> bool {
         path: file_path,
         provided_widgets: plugin_manifest.provided_widgets,
     });
-    let rtop_config_prettified: String = serde_json::to_string_pretty(&rtop_config).unwrap();
-    std::fs::write(rtop_config_path.clone(), rtop_config_prettified).unwrap_or_else(|e| {
-        println!(
-            ":: {}",
-            format!("An error occurred while writing to the Rtop file ({}).", e)
-                .bold()
-                .red()
-        );
-        remove_plugin(plugin_repository_path, rtop_config_path);
-    });
+    save_json_to_file(&rtop_config, rtop_config_path);
     println!(":: {}", "Plugin linked to Rtop!".green());
     println!(":: {}", "Linking plugin to RTPM...".green());
     let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
@@ -109,18 +118,7 @@ fn install_plugin(plugin_manifest: PluginManifest) -> bool {
         version: plugin_manifest.version,
         repo: plugin_manifest.url,
     });
-    std::fs::write(
-        rtpm_config_path,
-        serde_json::to_string_pretty(&rtpm_config).unwrap(),
-    )
-    .unwrap_or_else(|e| {
-        println!(
-            ":: {}",
-            format!("An error occurred while writing to the Rtop file ({}).", e)
-                .bold()
-                .red()
-        );
-    });
+    save_json_to_file(&rtpm_config, rtpm_config_path);
     println!(":: {}", "Plugin linked to RTPM!".green());
     println!(":: {}", format!("The plugin {} is now installed! You can execute rtpm -Ip {} to get info about this plugin.", plugin_manifest.name, plugin_manifest.id).green());
     true
@@ -187,7 +185,6 @@ fn install_plugins(plugins: Vec<String>) {
     }
 
     let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
-
     let rtpm_config: RTPMConfig = serde_json::from_str(
         &std::fs::read_to_string(rtpm_config_path.clone()).unwrap_or_else(|_| "{}".to_string()),
     )
@@ -225,9 +222,9 @@ fn install_plugins(plugins: Vec<String>) {
     // println!(":: {}", "Exit...".green());
 }
 
-pub fn install(sub_matches: ArgMatches) {
+pub fn install(matches: ArgMatches) {
     let mut must_println: bool = false;
-    if sub_matches
+    if matches
         .get_one::<bool>("update")
         .expect("Defaulted by clap")
         .to_owned()
@@ -235,7 +232,7 @@ pub fn install(sub_matches: ArgMatches) {
         update_repositories();
         must_println = true;
     }
-    if sub_matches
+    if matches
         .get_one::<bool>("upgrade")
         .expect("Defaulted by clap")
         .to_owned()
@@ -244,7 +241,7 @@ pub fn install(sub_matches: ArgMatches) {
         std::process::exit(9);
     }
 
-    let plugins: Vec<String> = sub_matches
+    let plugins: Vec<String> = matches
         .get_many::<String>("plugins")
         .unwrap_or_else(|| {
             std::process::exit(0);
@@ -257,7 +254,7 @@ pub fn install(sub_matches: ArgMatches) {
         println!();
     }
 
-    if sub_matches
+    if matches
         .get_one::<bool>("unsecure-git-url")
         .expect("Defaulted by clap")
         .to_owned()

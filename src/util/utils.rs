@@ -1,9 +1,10 @@
 use crate::util::structs::{RTPMConfig, RepositoryPlugin};
 use colored::*;
+use serde::Serialize;
 use std::path::PathBuf;
 use url::Url;
 
-// Based on the human_bytes library of Forkbomb9: https://gitlab.com/forkbomb9/human_bytes-rs
+// Based on the human_bytes library of Forkbomb9: https://gitlab.com/forkbomb9/human_bytes-rs.
 pub fn convert_to_readable_unity<T: Into<f64>>(size: T) -> String {
     const SUFFIX: [&str; 9] = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
     let size_converted: f64 = size.into();
@@ -30,24 +31,6 @@ pub fn build_cargo_project(toml_path: PathBuf) {
         CompileOptions::new(&config, CompileMode::Build).unwrap();
     compile_options.build_config.requested_profile = InternedString::new("release");
     cargo::ops::compile(&workspace, &compile_options).unwrap();
-}
-
-pub fn remove_plugin(path_to_remove: PathBuf, rtop_config: PathBuf) {
-    println!(
-        ":: {}",
-        format!(
-            "The Rtop config file: {} does not exist, you must launch Rtop before using RtopUtil.",
-            rtop_config.into_os_string().into_string().unwrap()
-        )
-        .red()
-    );
-    println!(
-        ":: {}",
-        "Cleaning the previously installed plugin...".green()
-    );
-    std::fs::remove_dir_all(path_to_remove).unwrap();
-    println!(":: {}", "Cleaning finished, program exit...".green());
-    std::process::exit(0);
 }
 
 pub fn get_raw_url(url: Url) -> Option<Url> {
@@ -112,18 +95,7 @@ pub fn search_plugin(
                 .position(|r| r == &repository)
                 .unwrap();
             rtpm_config.repositories.remove(index);
-            let rtpm_config_json_prettified: String =
-                serde_json::to_string_pretty(&rtpm_config).unwrap();
-            std::fs::write(rtpm_config_path.clone(), rtpm_config_json_prettified).unwrap_or_else(
-                |e| {
-                    println!(
-                        ":: {}",
-                        format!("An error occurred while writing to the Rtop file ({}).", e)
-                            .bold()
-                            .red()
-                    );
-                },
-            );
+            save_json_to_file(&rtpm_config, rtpm_config_path.clone());
             continue;
         }
         let repository_plugins: RepositoryPlugin = serde_json::from_str(
@@ -143,4 +115,24 @@ pub fn search_plugin(
         }
     }
     repository_path_opt
+}
+
+pub fn save_json_to_file<T>(json: &T, path: PathBuf)
+where
+    T: ?Sized + Serialize,
+{
+    std::fs::write(path.clone(), serde_json::to_string_pretty(&json).unwrap()).unwrap_or_else(
+        |e| {
+            println!(
+                ":: {}",
+                format!(
+                    "An error occurred while writing to the {} file ({}).",
+                    path.into_os_string().into_string().unwrap(),
+                    e
+                )
+                .bold()
+                .red()
+            );
+        },
+    );
 }

@@ -1,30 +1,27 @@
 use clap::{Arg, ArgAction, Command};
-use colored::*;
 use rtpm::util::structs::RTPMConfig;
+use rtpm::util::utils::save_json_to_file;
+use std::path::PathBuf;
 
 fn main() {
-    let rtop_util_config_path: std::path::PathBuf = dirs::data_dir().unwrap_or_else(|| {
+    let rtop_data_dir: PathBuf = dirs::data_dir().unwrap_or_else(|| {
         println!("Your system is not supported, please open an issue at: https://github.com/RtopRS/RtopUtil/issues/new so we can add support for your system.");
         std::process::exit(9);
-    }).join("rtop").join("plugins");
-    std::fs::create_dir_all(rtop_util_config_path).unwrap();
-    std::fs::create_dir_all(dirs::data_dir().unwrap().join("rtop").join("repositories")).unwrap();
-    let config_path: std::path::PathBuf =
-        dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
+    }).join("rtop");
+
+    std::fs::create_dir_all(rtop_data_dir.join("plugins")).unwrap();
+    std::fs::create_dir_all(rtop_data_dir.join("repositories")).unwrap();
+
+    let rtop_config_dir: PathBuf = dirs::config_dir().unwrap().join("rtop");
+    std::fs::create_dir_all(&rtop_config_dir).unwrap();
+
+    let config_path: PathBuf = rtop_config_dir.join("rtpm.json");
     if !config_path.exists() {
         let config: RTPMConfig = RTPMConfig {
             repositories: Vec::new(),
             plugins: Vec::new(),
         };
-        let config_prettified: String = serde_json::to_string_pretty(&config).unwrap();
-        std::fs::write(config_path, config_prettified).unwrap_or_else(|e| {
-            println!(
-                ":: {}",
-                format!("An error occurred while writing to the Rtop file ({}).", e)
-                    .bold()
-                    .red()
-            );
-        });
+        save_json_to_file(&config, config_path);
     }
 
     let app: Command = Command::new("RtopPluginManager")
@@ -84,6 +81,42 @@ fn main() {
                 ),
         )
         .subcommand(
+            Command::new("uninstall")
+                .short_flag('U')
+                .long_flag("uninstall")
+                .about("Uninstall a Rtop plugin.")
+                .arg(
+                    Arg::new("plugins")
+                        .help("The plugin(s) name.")
+                        .takes_value(true)
+                        .multiple_values(true),
+                ),
+        )
+        .subcommand(
+            Command::new("add-repository")
+                .short_flag('A')
+                .long_flag("add-repository")
+                .about("Add custom Rtop plugin repository.")
+                .arg(
+                    Arg::new("repository")
+                        .help("The repository URL.")
+                        .takes_value(true)
+                        .multiple_values(false),
+                ),
+        )
+        .subcommand(
+            Command::new("remove-repository")
+                .short_flag('R')
+                .long_flag("remove-repository")
+                .about("Remove custom Rtop plugin repository.")
+                .arg(
+                    Arg::new("repository")
+                        .help("The repository URL.")
+                        .takes_value(true)
+                        .multiple_values(false),
+                ),
+        )
+        .subcommand(
         Command::new("infos")
             .short_flag('I')
             .long_flag("infos")
@@ -120,9 +153,16 @@ fn main() {
     );
 
     match app.get_matches().subcommand() {
-        Some(("install", sub_matches)) => rtpm::commands::install::install(sub_matches.clone()),
-        Some(("infos", sub_matches)) => rtpm::commands::infos::infos(sub_matches.clone()),
-        Some(("search", sub_matches)) => rtpm::commands::search::search(sub_matches.clone()),
+        Some(("install", matches)) => rtpm::commands::install::install(matches.clone()),
+        Some(("infos", matches)) => rtpm::commands::infos::infos(matches.clone()),
+        Some(("search", matches)) => rtpm::commands::search::search(matches.clone()),
+        Some(("uninstall", matches)) => rtpm::commands::uninstall::uninstall(matches.clone()),
+        Some(("add-repository", matches)) => {
+            rtpm::commands::add_repository::add_repository(matches.clone())
+        }
+        Some(("remove-repository", matches)) => {
+            rtpm::commands::remove_repository::remove_repository(matches.clone())
+        }
         _ => {}
     }
 }

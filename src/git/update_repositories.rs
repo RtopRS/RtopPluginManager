@@ -1,6 +1,7 @@
 use crate::git::clone::clone;
 use crate::git::pull::{do_fetch, do_merge};
 use crate::util::structs::{RTPMConfig, RepositoryManifest};
+use crate::util::utils::save_json_to_file;
 use colored::*;
 use git2::{Remote, Repository};
 use std::fs::DirEntry;
@@ -28,9 +29,9 @@ pub fn update_repositories() {
         )
     }
 
-    let config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
-    let mut rtop_config_json: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(&config_path).unwrap_or_else(|_| "{}".to_string()),
+    let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
+    let mut rtpm_config: RTPMConfig = serde_json::from_str(
+        &std::fs::read_to_string(&rtpm_config_path).unwrap_or_else(|_| "{}".to_string()),
     )
     .unwrap();
 
@@ -56,14 +57,14 @@ pub fn update_repositories() {
             .green()
         );
 
-        if !rtop_config_json.repositories.contains(&folder_name) {
+        if !rtpm_config.repositories.contains(&folder_name) {
             println!(
                 ":: {}",
                 "The repository is not present in the config, this one has been added."
                     .yellow()
                     .bold()
             );
-            rtop_config_json.repositories.push(folder_name);
+            rtpm_config.repositories.push(folder_name);
         }
 
         let repo: Repository = Repository::open(repository.path()).unwrap();
@@ -80,18 +81,9 @@ pub fn update_repositories() {
             .green()
         );
     }
-    std::fs::write(
-        config_path,
-        serde_json::to_string_pretty(&rtop_config_json).unwrap(),
-    )
-    .unwrap_or_else(|e| {
-        println!(
-            ":: {}",
-            format!("An error occurred while writing to the Rtop file ({}).", e)
-                .bold()
-                .red()
-        );
-    });
+
+    save_json_to_file(&rtpm_config, rtpm_config_path);
+
     println!(
         ":: {}",
         "Update of all Rtop plugin repositories completed!"

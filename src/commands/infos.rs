@@ -236,16 +236,16 @@ fn repositories_list() {
     }
 }
 
-pub fn infos(sub_matches: ArgMatches) {
-    let plugin_arg: bool = sub_matches
+pub fn infos(matches: ArgMatches) {
+    let plugin_arg: bool = matches
         .get_one::<bool>("plugin")
         .expect("Defaulted by clap")
         .to_owned();
-    let repository_arg: bool = sub_matches
+    let repository_arg: bool = matches
         .get_one::<bool>("repository")
         .expect("Defaulted by clap")
         .to_owned();
-    let list_arg: bool = sub_matches
+    let list_arg: bool = matches
         .get_one::<bool>("list")
         .expect("Defaulted by clap")
         .to_owned();
@@ -255,7 +255,7 @@ pub fn infos(sub_matches: ArgMatches) {
     } else if plugin_arg && list_arg {
         plugin_list();
     } else {
-        let plugin_or_repository: Vec<String> = sub_matches
+        let plugin_or_repository: Vec<String> = matches
             .get_many::<String>("elements")
             .unwrap_or_else(|| {
                 println!(
