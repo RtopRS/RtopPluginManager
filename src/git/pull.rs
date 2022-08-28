@@ -25,6 +25,7 @@ pub fn do_fetch<'a>(
                     stats.indexed_deltas(),
                     stats.total_deltas()
                 )
+                .green()
             );
         } else if stats.total_objects() > 0 {
             let network_pct: usize = (100 * stats.received_objects()) / stats.total_objects();
@@ -50,18 +51,23 @@ pub fn do_fetch<'a>(
     remote.fetch(refs, Some(&mut fo), None)?;
 
     let stats: Progress = remote.stats();
-    println!(
-        ":: {}",
-        format!(
-            "Received {}/{} objects for a total {}.",
-            stats.indexed_objects(),
-            stats.total_objects(),
-            convert_to_readable_unity(stats.received_bytes() as f64)
-        )
-        .green()
-    );
+    if stats.total_objects() == 0 {
+        println!(":: {}", "No updates available for this repository.".green());
+    } else {
+        println!(
+            ":: {}",
+            format!(
+                "Received {}/{} objects for a total {}.",
+                stats.indexed_objects(),
+                stats.total_objects(),
+                convert_to_readable_unity(stats.received_bytes() as f64)
+            )
+            .green()
+        );
+    }
+
     let fetch_head: Reference = repo.find_reference("FETCH_HEAD")?;
-    Ok(repo.reference_to_annotated_commit(&fetch_head)?)
+    repo.reference_to_annotated_commit(&fetch_head)
 }
 
 fn fast_forward(
@@ -144,7 +150,7 @@ pub fn do_merge<'a>(
         };
     } else if analysis.0.is_normal() {
         let head_commit: AnnotatedCommit = repo.reference_to_annotated_commit(&repo.head()?)?;
-        normal_merge(&repo, &head_commit, &fetch_commit)?;
+        normal_merge(repo, &head_commit, &fetch_commit)?;
     }
 
     Ok(())

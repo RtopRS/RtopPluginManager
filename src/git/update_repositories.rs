@@ -1,15 +1,15 @@
-use std::fs::DirEntry;
 use crate::git::clone::clone;
 use crate::git::pull::{do_fetch, do_merge};
 use crate::util::structs::{RTPMConfig, RepositoryManifest};
 use colored::*;
 use git2::{Remote, Repository};
+use std::fs::DirEntry;
 use std::path::PathBuf;
 
 pub fn update_repositories() {
     println!(
         ":: {}",
-        "Update of all Rtop plugin repositories...".green().bold()
+        "Update of all Rtop plugin repositories...\n".green().bold()
     );
     let repositories_path: PathBuf = dirs::data_dir().unwrap().join("rtop").join("repositories");
     let mut must_update_rtop: bool = true;
@@ -28,22 +28,16 @@ pub fn update_repositories() {
         )
     }
 
-    let config_path: PathBuf = dirs::config_dir()
-        .unwrap()
-        .join("rtop")
-        .join("rtop-util.json");
+    let config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
     let mut rtop_config_json: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(&config_path.clone()).unwrap_or_else(|_| "{}".to_string()),
+        &std::fs::read_to_string(&config_path).unwrap_or_else(|_| "{}".to_string()),
     )
     .unwrap();
 
     for repository in std::fs::read_dir(repositories_path).unwrap() {
         let repository: &DirEntry = repository.as_ref().unwrap();
 
-        let folder_name: String = repository
-            .file_name()
-            .into_string()
-            .unwrap();
+        let folder_name: String = repository.file_name().into_string().unwrap();
         if !must_update_rtop && repository.file_name() == "rtop" {
             continue;
         }
@@ -56,7 +50,8 @@ pub fn update_repositories() {
             ":: {}",
             format!(
                 "Updating the repository: {} ({})...",
-                repo_manifest.name, repo_manifest.url
+                repo_manifest.name.bold(),
+                repo_manifest.url
             )
             .green()
         );
@@ -74,12 +69,13 @@ pub fn update_repositories() {
         let repo: Repository = Repository::open(repository.path()).unwrap();
         let mut remote: Remote = repo.find_remote("origin").unwrap();
         let fetch_commit = do_fetch(&repo, &["main"], &mut remote).unwrap();
-        do_merge(&repo, &"main", fetch_commit).unwrap();
+        do_merge(&repo, "main", fetch_commit).unwrap();
         println!(
             ":: {}",
             format!(
-                "Update of the repository: {} ({}) is terminated!",
-                repo_manifest.name, repo_manifest.url
+                "Update of the repository: {} ({}) is terminated!\n",
+                repo_manifest.name.bold(),
+                repo_manifest.url
             )
             .green()
         );

@@ -1,4 +1,5 @@
-use crate::util::structs::{PluginManifest, RepositoryManifest};
+use crate::util::structs::{PluginManifest, RTPMConfig, RepositoryManifest};
+use crate::util::utils::search_plugin;
 use clap::ArgMatches;
 use colored::*;
 use itertools::Itertools;
@@ -25,9 +26,12 @@ fn repository_infos(repositories: Vec<String>) {
         if !repository_path.exists() {
             println!(
                 ":: {}",
-                format!("The repository {} doesn't exist or is not available.", repository)
-                    .red()
-                    .bold()
+                format!(
+                    "The repository {} doesn't exist or is not available.",
+                    repository
+                )
+                .red()
+                .bold()
             );
             continue;
         }
@@ -46,18 +50,15 @@ fn repository_infos(repositories: Vec<String>) {
         }
 
         println!(
-            "{}",
-            format!(
-                "{} {}\n{} {}\n{} {}\n{} {}\n",
-                "Name         :".blue(),
-                repo_manifest.name.yellow(),
-                "Description  :".blue(),
-                repo_manifest.description.yellow(),
-                "URL          :".blue(),
-                repo_manifest.url.yellow(),
-                "Fallback URL :".blue(),
-                fallback_url.yellow(),
-            )
+            "{} {}\n{} {}\n{} {}\n{} {}\n",
+            "Name         :".blue(),
+            repo_manifest.name.yellow(),
+            "Description  :".blue(),
+            repo_manifest.description.yellow(),
+            "URL          :".blue(),
+            repo_manifest.url.yellow(),
+            "Fallback URL :".blue(),
+            fallback_url.yellow(),
         );
     }
 }
@@ -74,13 +75,22 @@ fn plugin_infos(plugins: Vec<String>) {
         println!(":: {}", "Information about plugin\n".yellow().bold());
     }
 
+    let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
+
+    let rtpm_config: RTPMConfig = serde_json::from_str(
+        &std::fs::read_to_string(rtpm_config_path.clone()).unwrap_or_else(|_| "{}".to_string()),
+    )
+    .unwrap();
+
     for plugin in plugins {
-        let plugin_path: PathBuf = dirs::data_dir()
-            .unwrap()
-            .join("rtop")
-            .join("plugins")
-            .join(plugin.clone());
-        if !plugin_path.exists() {
+        let repository_path: PathBuf = if let Some(repository_path) = search_plugin(
+            plugin.clone(),
+            rtpm_config.clone(),
+            rtpm_config_path.clone(),
+            false,
+        ) {
+            repository_path
+        } else {
             println!(
                 ":: {}",
                 format!("The plugin {} doesn't exist or is not available.", plugin)
@@ -88,16 +98,20 @@ fn plugin_infos(plugins: Vec<String>) {
                     .bold()
             );
             continue;
-        }
+        };
 
         let plugin_manifest: PluginManifest = serde_json::from_str(
-            &std::fs::read_to_string(plugin_path.join("manifest.json"))
-                .unwrap_or_else(|_| "{}".to_string()),
+            &std::fs::read_to_string(
+                repository_path
+                    .join("plugins")
+                    .join(format!("{}.json", plugin)),
+            )
+            .unwrap_or_else(|_| "{}".to_string()),
         )
-            .unwrap();
+        .unwrap();
 
         let mut to_print: String = format!(
-            "{} {}\n{} {}\n{} {}\n{} {}\n",
+            "{} {}\n{} {}\n{} {}\n{} {}\n{} {}\n",
             "ID           :".blue(),
             plugin_manifest.id.yellow(),
             "Name         :".blue(),
@@ -106,61 +120,160 @@ fn plugin_infos(plugins: Vec<String>) {
             plugin_manifest.description.yellow(),
             "Version      :".blue(),
             plugin_manifest.version.yellow(),
+            "URL          :".blue(),
+            plugin_manifest.url.yellow(),
         );
 
         if let Some(author) = plugin_manifest.author {
-            to_print.push_str(format!("{} {}\n", "Author       :".blue(), author.yellow()).as_str());
-        } else if plugin_manifest.authors.is_some() && !plugin_manifest.authors.clone().unwrap().is_empty() {
-            to_print.push_str(format!("{} {}\n", "Authors      :".blue(), plugin_manifest.authors.unwrap().join(", ").yellow()).as_str());
+            to_print
+                .push_str(format!("{} {}\n", "Author       :".blue(), author.yellow()).as_str());
+        } else if plugin_manifest.authors.is_some()
+            && !plugin_manifest.authors.clone().unwrap().is_empty()
+        {
+            to_print.push_str(
+                format!(
+                    "{} {}\n",
+                    "Authors      :".blue(),
+                    plugin_manifest.authors.unwrap().join(", ").yellow()
+                )
+                .as_str(),
+            );
         }
         if let Some(license) = plugin_manifest.license {
-            to_print.push_str(format!("{} {}\n", "License      :".blue(), license.yellow()).as_str());
+            to_print
+                .push_str(format!("{} {}\n", "License      :".blue(), license.yellow()).as_str());
         } else {
             to_print.push_str(format!("{} {}\n", "License      :".blue(), "No".yellow()).as_str());
         }
         if plugin_manifest.arch.is_some() && !plugin_manifest.arch.clone().unwrap().is_empty() {
-            to_print.push_str(format!("{} {}\n", "Arch         :".blue(), plugin_manifest.arch.unwrap().join(", ").yellow()).as_str());
+            to_print.push_str(
+                format!(
+                    "{} {}\n",
+                    "Arch         :".blue(),
+                    plugin_manifest.arch.unwrap().join(", ").yellow()
+                )
+                .as_str(),
+            );
         } else {
             to_print.push_str(format!("{} {}\n", "Arch         :".blue(), "All".yellow()).as_str());
         }
         if plugin_manifest.os.is_some() && !plugin_manifest.os.clone().unwrap().is_empty() {
-            to_print.push_str(format!("{} {}\n", "OS           :".blue(), plugin_manifest.os.unwrap().join(", ").yellow()).as_str());
+            to_print.push_str(
+                format!(
+                    "{} {}\n",
+                    "OS           :".blue(),
+                    plugin_manifest.os.unwrap().join(", ").yellow()
+                )
+                .as_str(),
+            );
         } else {
             to_print.push_str(format!("{} {}\n", "OS           :".blue(), "All".yellow()).as_str());
         }
-
 
         println!("{}", to_print);
     }
 }
 
-pub fn infos(sub_matches: ArgMatches) {
-    let plugin_or_repository: Vec<String> = sub_matches
-        .get_many::<String>("elements")
-        .unwrap_or_else(|| {
-            println!(
-                "{}",
-                "You have not filled in any plugin or repository."
-                    .red()
-                    .bold()
-            );
-            std::process::exit(22);
-        })
-        .map(|s| s.to_owned())
-        .unique()
-        .collect();
+fn plugin_list() {
+    let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
+    let rtpm_config: RTPMConfig = serde_json::from_str(
+        &std::fs::read_to_string(rtpm_config_path).unwrap_or_else(|_| "{}".to_string()),
+    )
+    .unwrap();
 
-    if sub_matches
-        .get_one::<bool>("repository")
-        .expect("Defaulted by clap")
-        .to_owned()
-    {
-        repository_infos(plugin_or_repository);
-    } else if sub_matches
+    let mut plugins_list: String = String::new();
+    for plugin in rtpm_config.plugins {
+        plugins_list.push_str(
+            format!(
+                "{} (v{}) - {}\n",
+                plugin.name.yellow().bold(),
+                plugin.version.bold(),
+                plugin.repo
+            )
+            .as_str(),
+        );
+    }
+    if plugins_list.is_empty() {
+        println!("{}", "No plugin is installed.".red().bold())
+    } else {
+        println!("{}", plugins_list);
+    }
+}
+
+fn repositories_list() {
+    let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
+    let rtpm_config: RTPMConfig = serde_json::from_str(
+        &std::fs::read_to_string(rtpm_config_path).unwrap_or_else(|_| "{}".to_string()),
+    )
+    .unwrap();
+
+    let mut repositories_list: String = String::new();
+    for repository in rtpm_config.repositories {
+        let repository_path: PathBuf = dirs::data_dir()
+            .unwrap()
+            .join("rtop")
+            .join("repositories")
+            .join(repository)
+            .join("manifest.json");
+        let repository_manifest: RepositoryManifest = serde_json::from_str(
+            &std::fs::read_to_string(repository_path).unwrap_or_else(|_| "{}".to_string()),
+        )
+        .unwrap();
+
+        repositories_list.push_str(
+            format!(
+                "{} - {}\n",
+                repository_manifest.name.yellow().bold(),
+                repository_manifest.url.bold(),
+            )
+            .as_str(),
+        );
+    }
+    if repositories_list.is_empty() {
+        println!("{}", "No repository is present.".red().bold())
+    } else {
+        println!("{}", repositories_list);
+    }
+}
+
+pub fn infos(sub_matches: ArgMatches) {
+    let plugin_arg: bool = sub_matches
         .get_one::<bool>("plugin")
         .expect("Defaulted by clap")
-        .to_owned()
-    {
-        plugin_infos(plugin_or_repository);
+        .to_owned();
+    let repository_arg: bool = sub_matches
+        .get_one::<bool>("repository")
+        .expect("Defaulted by clap")
+        .to_owned();
+    let list_arg: bool = sub_matches
+        .get_one::<bool>("list")
+        .expect("Defaulted by clap")
+        .to_owned();
+
+    if repository_arg && list_arg {
+        repositories_list();
+    } else if plugin_arg && list_arg {
+        plugin_list();
+    } else {
+        let plugin_or_repository: Vec<String> = sub_matches
+            .get_many::<String>("elements")
+            .unwrap_or_else(|| {
+                println!(
+                    "{}",
+                    "You have not filled in any plugin or repository."
+                        .red()
+                        .bold()
+                );
+                std::process::exit(22);
+            })
+            .map(|s| s.to_owned())
+            .unique()
+            .collect();
+
+        if repository_arg {
+            repository_infos(plugin_or_repository);
+        } else if plugin_arg {
+            plugin_infos(plugin_or_repository);
+        }
     }
 }

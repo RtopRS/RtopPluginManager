@@ -9,17 +9,15 @@ fn main() {
     }).join("rtop").join("plugins");
     std::fs::create_dir_all(rtop_util_config_path).unwrap();
     std::fs::create_dir_all(dirs::data_dir().unwrap().join("rtop").join("repositories")).unwrap();
-    let config_path: std::path::PathBuf = dirs::config_dir()
-        .unwrap()
-        .join("rtop")
-        .join("rtop-util.json");
+    let config_path: std::path::PathBuf =
+        dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
     if !config_path.exists() {
         let config: RTPMConfig = RTPMConfig {
             repositories: Vec::new(),
             plugins: Vec::new(),
         };
         let config_prettified: String = serde_json::to_string_pretty(&config).unwrap();
-        std::fs::write(config_path.clone(), config_prettified).unwrap_or_else(|e| {
+        std::fs::write(config_path, config_prettified).unwrap_or_else(|e| {
             println!(
                 ":: {}",
                 format!("An error occurred while writing to the Rtop file ({}).", e)
@@ -74,6 +72,18 @@ fn main() {
                 ),
         )
         .subcommand(
+            Command::new("search")
+                .short_flag('Q')
+                .long_flag("search")
+                .about("Search package in all repositories.")
+                .arg(
+                    Arg::new("plugins")
+                        .help("The plugin(s) name.")
+                        .takes_value(true)
+                        .multiple_values(true),
+                ),
+        )
+        .subcommand(
         Command::new("infos")
             .short_flag('I')
             .long_flag("infos")
@@ -95,6 +105,13 @@ fn main() {
                     .takes_value(false)
             )
             .arg(
+                Arg::new("list")
+                    .help("This flag allows to list installed plugins or repositories.")
+                    .short('a')
+                    .action(ArgAction::SetTrue)
+                    .takes_value(false)
+            )
+            .arg(
                 Arg::new("elements")
                     .help("The plugin or repository name.")
                     .takes_value(true)
@@ -105,6 +122,7 @@ fn main() {
     match app.get_matches().subcommand() {
         Some(("install", sub_matches)) => rtpm::commands::install::install(sub_matches.clone()),
         Some(("infos", sub_matches)) => rtpm::commands::infos::infos(sub_matches.clone()),
+        Some(("search", sub_matches)) => rtpm::commands::search::search(sub_matches.clone()),
         _ => {}
     }
 }

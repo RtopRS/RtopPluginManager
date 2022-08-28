@@ -1,3 +1,4 @@
+use crate::util::structs::{RTPMConfig, RepositoryPlugin};
 use colored::*;
 use std::path::PathBuf;
 use url::Url;
@@ -82,4 +83,64 @@ pub fn get_raw_url(url: Url) -> Option<Url> {
             None
         }
     }
+}
+pub fn search_plugin(
+    plugin_name: String,
+    mut rtpm_config: RTPMConfig,
+    rtpm_config_path: PathBuf,
+    print_if_found: bool,
+) -> Option<PathBuf> {
+    let mut repository_path_opt: Option<PathBuf> = None;
+    for repository in rtpm_config.repositories.clone() {
+        let path: PathBuf = dirs::data_dir()
+            .unwrap()
+            .join("rtop")
+            .join("repositories")
+            .join(repository.clone());
+        if !path.exists() {
+            println!(
+                ":: {}",
+                format!(
+                    "The repository {} is not or no longer present, I delete it.",
+                    repository
+                )
+                .yellow()
+            );
+            let index: usize = rtpm_config
+                .repositories
+                .iter()
+                .position(|r| r == &repository)
+                .unwrap();
+            rtpm_config.repositories.remove(index);
+            let rtpm_config_json_prettified: String =
+                serde_json::to_string_pretty(&rtpm_config).unwrap();
+            std::fs::write(rtpm_config_path.clone(), rtpm_config_json_prettified).unwrap_or_else(
+                |e| {
+                    println!(
+                        ":: {}",
+                        format!("An error occurred while writing to the Rtop file ({}).", e)
+                            .bold()
+                            .red()
+                    );
+                },
+            );
+            continue;
+        }
+        let repository_plugins: RepositoryPlugin = serde_json::from_str(
+            &std::fs::read_to_string(path.join("plugins.json"))
+                .unwrap_or_else(|_| "{}".to_string()),
+        )
+        .unwrap();
+        if repository_plugins.plugins.contains(&plugin_name) {
+            if print_if_found {
+                println!(
+                    ":: {}",
+                    format!("Plugin found in the repository {}!", repository.bold()).green()
+                );
+            }
+            repository_path_opt = Option::from(path);
+            break;
+        }
+    }
+    repository_path_opt
 }
