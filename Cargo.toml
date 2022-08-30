@@ -15,8 +15,17 @@ opt-level = "z"
 strip = true
 lto = true
 
+[package.metadata.deb]
+extended-description = """\
+The official tool to simplify the management of plugins for Rtop.\
+It allows to download plugins from plugin repositories or from simple git repositories. It also allows to update them easily or to get information about the plugins."""
+depends = "$auto,rtop"
+section = "utility"
+priority = "optional"
+
 [dependencies]
 reqwest = { version = "0.11", features = ["blocking", "json"] }
+openssl = { version = "^0.10.41", features = ["vendored"] }
 serde = { version = "1.0", features = ["derive"] }
 itertools = "0.10"
 serde_json = "1.0"

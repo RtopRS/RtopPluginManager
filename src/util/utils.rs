@@ -46,7 +46,7 @@ pub fn get_raw_url(url: Url) -> Option<Url> {
 
     match url_host {
         "github.com" => Option::from(
-            Url::parse(&*format!(
+            Url::parse(&format!(
                 "https://raw.githubusercontent.com/{}/{}/main/",
                 url_split[0].clone(),
                 url_split[1].clone()
@@ -54,7 +54,7 @@ pub fn get_raw_url(url: Url) -> Option<Url> {
             .unwrap(),
         ),
         "gitlab.com" => Option::from(
-            Url::parse(&*format!(
+            Url::parse(&format!(
                 "https://gitlab.com/{}/{}/-/raw/main/",
                 url_split[0].clone(),
                 url_split[1].clone()

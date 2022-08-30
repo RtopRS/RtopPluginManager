@@ -54,4 +54,5 @@ pub struct RTPMConfigPluginElement {
     pub name: String,
     pub version: String,
     pub repo: String,
+    pub plugin_type: i8,
 }

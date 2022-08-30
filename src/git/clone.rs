@@ -60,7 +60,7 @@ pub fn clone(url: String, path: &Path) {
     cb.transfer_progress(|stats| {
         let mut state = state.borrow_mut();
         state.progress = Some(stats.to_owned());
-        print(&mut *state);
+        print(&mut state);
         true
     });
 
@@ -69,7 +69,7 @@ pub fn clone(url: String, path: &Path) {
         let mut state: RefMut<State> = state.borrow_mut();
         state.current = cur;
         state.total = total;
-        print(&mut *state);
+        print(&mut state);
     });
 
     let mut fo = FetchOptions::new();

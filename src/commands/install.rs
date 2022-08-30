@@ -1,5 +1,6 @@
 use crate::git::clone::clone;
 use crate::git::update_repositories::update_repositories;
+use crate::git::updates_packages::update_packages;
 use crate::util::structs::{
     PluginManifest, RTPMConfig, RTPMConfigPluginElement, RtopConfig, RtopConfigPlugins,
 };
@@ -30,7 +31,7 @@ fn remove_plugin(path_to_remove: PathBuf, rtop_config: PathBuf) {
     std::process::exit(0);
 }
 
-fn install_plugin(plugin_manifest: PluginManifest) -> bool {
+fn install_plugin(plugin_manifest: PluginManifest, plugin_type: i8) -> bool {
     let plugin_repository_path: PathBuf = dirs::data_dir()
         .unwrap()
         .join("rtop")
@@ -117,6 +118,7 @@ fn install_plugin(plugin_manifest: PluginManifest) -> bool {
         name: plugin_manifest.name.clone(),
         version: plugin_manifest.version,
         repo: plugin_manifest.url,
+        plugin_type,
     });
     save_json_to_file(&rtpm_config, rtpm_config_path);
     println!(":: {}", "Plugin linked to RTPM!".green());
@@ -146,7 +148,7 @@ fn install_insecure_plugins(plugins: Vec<String>) {
             format!("Get the manifest for the repo: {}...", plugin).green()
         );
 
-        let url: Url = if let Ok(url) = Url::parse(&*plugin) {
+        let url: Url = if let Ok(url) = Url::parse(&plugin) {
             url
         } else {
             continue;
@@ -169,7 +171,7 @@ fn install_insecure_plugins(plugins: Vec<String>) {
             continue;
         };
         println!(":: {}", "Manifest recovered!".green());
-        install_plugin(plugin_manifest);
+        install_plugin(plugin_manifest, 1);
     }
     println!(":: {}", "Exit...".green());
 }
@@ -217,7 +219,7 @@ fn install_plugins(plugins: Vec<String>) {
             .unwrap_or_else(|_| "{}".to_string()),
         )
         .unwrap();
-        install_plugin(plugin_manifest);
+        install_plugin(plugin_manifest, 0);
     }
     // println!(":: {}", "Exit...".green());
 }
@@ -237,8 +239,8 @@ pub fn install(matches: ArgMatches) {
         .expect("Defaulted by clap")
         .to_owned()
     {
-        // TODO implement upgrade
-        std::process::exit(9);
+        update_packages();
+        std::process::exit(0);
     }
 
     let plugins: Vec<String> = matches

@@ -25,7 +25,7 @@ pub fn update_repositories() {
 
         clone(
             "https://github.com/RtopRS/PluginsRepository/".to_owned(),
-            &*repositories_path.join("rtop"),
+            &repositories_path.join("rtop"),
         )
     }
 

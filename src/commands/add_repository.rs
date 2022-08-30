@@ -26,7 +26,7 @@ pub fn add_repository(matches: ArgMatches) {
 
     println!(":: {}", "Downloading the repository...".green());
 
-    clone(repository.to_owned(), &*temp_path);
+    clone(repository.to_owned(), &temp_path);
 
     let manifest_path: PathBuf = temp_path.join("manifest.json");
 

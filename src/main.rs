@@ -28,10 +28,11 @@ fn main() {
         .about("The official tool to simplify the management of plugins for Rtop.")
         .version("0.0.1")
         .help_template(
-            "{bin} ({version}) - The official tool to simplify the management of plugins for RTop.\n\n{usage-heading}\n{usage}\n\n{all-args}\n",
+            "{bin} ({version}) - The official tool to simplify the management of plugins for Rtop.\n\n{usage-heading}\n{usage}\n\n{all-args}\n",
         )
         .subcommand_required(false)
-        .arg_required_else_help(false)
+        .arg_required_else_help(true)
+        .author("Rtop Development Team")
         .subcommand(
             Command::new("install")
                 .short_flag('S')
@@ -120,7 +121,7 @@ fn main() {
         Command::new("infos")
             .short_flag('I')
             .long_flag("infos")
-            .about("Retrieve info about a repository or a plugin.")
+            .about("Retrieve infos about a repository or a plugin.")
             .arg(
                 Arg::new("repository")
                     .help("This flag allows to show informations about a repository.")
