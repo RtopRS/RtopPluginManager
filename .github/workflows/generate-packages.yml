@@ -1,0 +1,61 @@
+name: Generate packages and post them to release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-linux-packages:
+    name: Generate Linux packages and post them to release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get RTPM version
+        id: rtpm_version
+        run: echo "::set-output name=APP_VERSION::$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)"
+
+      - name: Build amd64 debian package
+        uses: asthowen/CargoDebAmd64@main
+
+      - name: Build ARMv7 debian package
+        uses: asthowen/CargoDebARMv7@main
+
+      - name: Build rpm package
+        uses: asthowen/CargoGenerateRPM@main
+
+      - name: Upload amd64 .deb to releases
+        uses: Asthowen/UploadReleaseAsset@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          release_tag: ${{ steps.rtpm_version.outputs.APP_VERSION }}
+          asset_path: ./target/x86_64-unknown-linux-musl/debian/rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_amd64.deb
+          asset_name: rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_amd64.deb
+          asset_content_type: application/octet-stream
+
+      - name: Upload ARMv7 .deb to releases
+        uses: Asthowen/UploadReleaseAsset@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          release_tag: ${{ steps.rtpm_version.outputs.APP_VERSION }}
+          asset_path: ./target/armv7-unknown-linux-musleabih/debian/rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_armhf.deb
+          asset_name: rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_arm.deb
+          asset_content_type: application/octet-stream
+
+      - name: Upload rpm to releases
+        uses: Asthowen/UploadReleaseAsset@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          release_tag: ${{ steps.rtpm_version.outputs.APP_VERSION }}
+          asset_path: ./target/generate-rpm/rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-1.x86_64.rpm
+          asset_name: rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-1.x86_64.rpm
+          asset_content_type: application/octet-stream

@@ -6,12 +6,12 @@ edition = "2021"
 description = "The official tool to simplify the management of plugins for Rtop."
 repository = "https://github.com/RtopRS/RtopPluginManager"
 readme = "README.md"
+homepage = "https://github.com/RtopRS"
 license = "MPL-2.0"
 
 [profile.release]
 codegen-units = 1
 panic = "abort"
-opt-level = "z"
 strip = true
 lto = true
 
@@ -22,6 +22,14 @@ It allows to download plugins from plugin repositories or from simple git reposi
 depends = "$auto,rtop"
 section = "utility"
 priority = "optional"
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/rtpm", dest = "/usr/bin/rpm", mode = "0755" },
+]
+
+[package.metadata.generate-rpm.requires]
+rtop = "*"
 
 [dependencies]
 reqwest = { version = "0.11", features = ["blocking", "json"] }

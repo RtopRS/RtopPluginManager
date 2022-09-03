@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 fn main() {
     let rtop_data_dir: PathBuf = dirs::data_dir().unwrap_or_else(|| {
-        println!("Your system is not supported, please open an issue at: https://github.com/RtopRS/RtopUtil/issues/new so we can add support for your system.");
+        println!("Your system is not supported, please open an issue at: https://github.com/RtopRS/RtopPluginManager/issues/new so we can add support for your system.");
         std::process::exit(9);
     }).join("rtop");
 

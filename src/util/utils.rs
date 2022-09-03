@@ -62,7 +62,7 @@ pub fn get_raw_url(url: Url) -> Option<Url> {
             .unwrap(),
         ),
         _ => {
-            println!(":: {}", "Currently, only GitHub and GitLab are supported for external plugins. You can open an issue on: https://github.com/RtopRS/RtopUtil/issues/new so I can add another site.".bold().red());
+            println!(":: {}", "Currently, only GitHub and GitLab are supported for external plugins. You can open an issue on: https://github.com/RtopRS/RtopPluginManager/issues/new so I can add another site.".bold().red());
             None
         }
     }

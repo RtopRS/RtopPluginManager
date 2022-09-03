@@ -11,9 +11,9 @@
     </a>
     <br>
     <a href="https://github.com/RtopRS/RtopPluginManager/blob/main/LICENSE">
-        <img src="https://img.shields.io/github/license/Asthowen/RtopPluginManager?style=for-the-badge" alt="License">
+        <img src="https://img.shields.io/github/license/RtopRS/RtopPluginManager?style=for-the-badge" alt="License">
     </a>
-    <a href="https://github.com/RtopRS/RtopRS/RtopPluginManager">
+    <a href="https://github.com/RtopRS/RtopPluginManager">
         <img src="https://img.shields.io/github/stars/RtopRS/RtopPluginManager?style=for-the-badge" alt="Stars">
     </a>
 </p>
@@ -21,12 +21,17 @@
     <strong>The official tool to simplify the management of plugins for Rtop.</strong>
 </h3>
 
+## Installation & Build
+Refer to the [**wiki**](https://github.com/RtopRS/RtopPluginManager/wiki/Installation) which contains all the instructions according to your OS.
+
+## Usage
+Refer to the [**wiki**](https://github.com/RtopRS/RtopPluginManager/wiki/Use) which lists, describes and gives examples of the use of each command.
+
 ## Versioning
 **This project uses semantic versioning, which has the format: MAJOR.MINOR.PATCH with:**
 * `MAJOR` version when you make incompatible API changes.
 * `MINOR` version when you add functionality in a backwards compatible manner.
 * `PATCH` version when you make backwards compatible bug fixes.
 
-
 ## License
-**[AFetch](https://github.com/RtopRS/RtopPluginManager) | [Mozilla Public License 2.0](https://github.com/RtopRS/RtopPluginManager/blob/main/LICENSE)**
+**[RtopPluginManager (RTPM)](https://github.com/RtopRS/RtopPluginManager) | [Mozilla Public License 2.0](https://github.com/RtopRS/RtopPluginManager/blob/main/LICENSE)**

@@ -17,7 +17,7 @@ fn remove_plugin(path_to_remove: PathBuf, rtop_config: PathBuf) {
     println!(
         ":: {}",
         format!(
-            "The Rtop config file: {} does not exist, you must launch Rtop before using RtopUtil.",
+            "The Rtop config file: {} does not exist, you must launch Rtop before using RtopPluginManager.",
             rtop_config.into_os_string().into_string().unwrap()
         )
         .red()
