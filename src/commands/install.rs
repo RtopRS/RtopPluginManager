@@ -4,7 +4,9 @@ use crate::git::updates_packages::update_packages;
 use crate::util::structs::{
     PluginManifest, RTPMConfig, RTPMConfigPluginElement, RtopConfig, RtopConfigPlugins,
 };
-use crate::util::utils::{build_cargo_project, get_raw_url, save_json_to_file, search_plugin};
+use crate::util::utils::{
+    build_cargo_project, get_raw_url, save_json_to_file, search_plugin, verify_device_specification,
+};
 use clap::ArgMatches;
 use colored::*;
 use itertools::Itertools;
@@ -46,6 +48,28 @@ fn install_plugin(plugin_manifest: PluginManifest, plugin_type: i8) -> bool {
     } else {
         "an unknown".to_owned()
     };
+
+    if !verify_device_specification(&plugin_manifest) {
+        println!(
+            ":: {}",
+            "The author of this plugin has excluded your OS or architecture from the compatibility list.".yellow().bold()
+        );
+        print!(
+            ":: {} ",
+            "You can still continue if you wish (the compilation of the plugin may fail) (y/n)"
+                .purple()
+        );
+        let _ = std::io::stdout().flush();
+        let mut user_response: String = String::new();
+        std::io::stdin()
+            .read_line(&mut user_response)
+            .expect("You must enter a correct answer.");
+        if !vec!["y", "yes", "ok", "o"].contains(&user_response.trim().to_lowercase().as_str()) {
+            println!(":: {}", "Exiting...".blue());
+            std::process::exit(0);
+        }
+    }
+
     if plugin_repository_path.exists() {
         println!(":: {}", format!("The plugin {} by {} is already installed! You can use the {} command to update it.", plugin_manifest.name, author_string, "rtpm -Sud".bold()).red());
         return false;

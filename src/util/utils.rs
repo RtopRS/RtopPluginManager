@@ -1,3 +1,4 @@
+use crate::util::structs::PluginManifest;
 use crate::util::structs::{RTPMConfig, RepositoryPlugin};
 use colored::*;
 use serde::Serialize;
@@ -135,4 +136,16 @@ where
             );
         },
     );
+}
+
+pub fn verify_device_specification(plugin_manifest: &PluginManifest) -> bool {
+    if let Some(os) = &plugin_manifest.os {
+        return !(!os.is_empty() && !os.contains(&std::env::consts::OS.to_owned()));
+    }
+
+    if let Some(arch) = &plugin_manifest.arch {
+        return !(!arch.is_empty() && !arch.contains(&std::env::consts::ARCH.to_owned()));
+    }
+
+    true
 }
