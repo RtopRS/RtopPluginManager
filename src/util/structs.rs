@@ -12,7 +12,6 @@ pub struct PluginManifest {
     pub(crate) license: Option<String>,
     pub(crate) os: Option<Vec<String>>,
     pub(crate) arch: Option<Vec<String>>,
-    pub(crate) provided_widgets: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,8 +37,8 @@ pub struct RtopConfig {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RtopConfigPlugins {
+    pub(crate) name: String,
     pub(crate) path: String,
-    pub(crate) provided_widgets: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

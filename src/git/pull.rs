@@ -1,7 +1,7 @@
 // Code based on the git2-rs example available on the URL: https://github.com/rust-lang/git2-rs/blob/master/examples/pull.rs.
 
 use crate::util::utils::convert_to_readable_unity;
-use colored::*;
+use colored::Colorize;
 use git2::{
     AnnotatedCommit, Commit, FetchOptions, Index, MergeAnalysis, MergePreference, Progress,
     Reference, RemoteCallbacks, Repository, Signature, Tree,
@@ -76,7 +76,7 @@ fn fast_forward(
     rc: &AnnotatedCommit,
 ) -> Result<(), git2::Error> {
     let name: String = match lb.name() {
-        Some(s) => s.to_string(),
+        Some(s) => s.to_owned(),
         None => String::from_utf8_lossy(lb.name_bytes()).to_string(),
     };
     let msg: String = format!("Fast-Forward: Setting {} to id: {}", name, rc.id());
@@ -122,35 +122,32 @@ fn normal_merge(
 pub fn do_merge<'a>(
     repo: &'a Repository,
     remote_branch: &str,
-    fetch_commit: AnnotatedCommit<'a>,
+    fetch_commit: &AnnotatedCommit<'a>,
 ) -> Result<(), git2::Error> {
-    let analysis: (MergeAnalysis, MergePreference) = repo.merge_analysis(&[&fetch_commit])?;
+    let analysis: (MergeAnalysis, MergePreference) = repo.merge_analysis(&[fetch_commit])?;
 
     if analysis.0.is_fast_forward() {
         let ref_name: String = format!("refs/heads/{}", remote_branch);
-        match repo.find_reference(&ref_name) {
-            Ok(mut r) => {
-                fast_forward(repo, &mut r, &fetch_commit)?;
-            }
-            Err(_) => {
-                repo.reference(
-                    &ref_name,
-                    fetch_commit.id(),
-                    true,
-                    &format!("Setting {} to {}", remote_branch, fetch_commit.id()),
-                )?;
-                repo.set_head(&ref_name)?;
-                repo.checkout_head(Some(
-                    git2::build::CheckoutBuilder::default()
-                        .allow_conflicts(true)
-                        .conflict_style_merge(true)
-                        .force(),
-                ))?;
-            }
-        };
+        if let Ok(mut r) = repo.find_reference(&ref_name) {
+            fast_forward(repo, &mut r, fetch_commit)?;
+        } else {
+            repo.reference(
+                &ref_name,
+                fetch_commit.id(),
+                true,
+                &format!("Setting {} to {}", remote_branch, fetch_commit.id()),
+            )?;
+            repo.set_head(&ref_name)?;
+            repo.checkout_head(Some(
+                git2::build::CheckoutBuilder::default()
+                    .allow_conflicts(true)
+                    .conflict_style_merge(true)
+                    .force(),
+            ))?;
+        }
     } else if analysis.0.is_normal() {
         let head_commit: AnnotatedCommit = repo.reference_to_annotated_commit(&repo.head()?)?;
-        normal_merge(repo, &head_commit, &fetch_commit)?;
+        normal_merge(repo, &head_commit, fetch_commit)?;
     }
 
     Ok(())

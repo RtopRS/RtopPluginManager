@@ -154,15 +154,15 @@ fn main() {
     );
 
     match app.get_matches().subcommand() {
-        Some(("install", matches)) => rtpm::commands::install::install(matches.clone()),
-        Some(("infos", matches)) => rtpm::commands::infos::infos(matches.clone()),
-        Some(("search", matches)) => rtpm::commands::search::search(matches.clone()),
-        Some(("uninstall", matches)) => rtpm::commands::uninstall::uninstall(matches.clone()),
+        Some(("install", matches)) => rtpm::commands::install::install(matches),
+        Some(("infos", matches)) => rtpm::commands::infos::infos(matches),
+        Some(("search", matches)) => rtpm::commands::search::search(matches),
+        Some(("uninstall", matches)) => rtpm::commands::uninstall::uninstall(matches),
         Some(("add-repository", matches)) => {
-            rtpm::commands::add_repository::add_repository(matches.clone())
+            rtpm::commands::add_repository::add_repository(matches)
         }
         Some(("remove-repository", matches)) => {
-            rtpm::commands::remove_repository::remove_repository(matches.clone())
+            rtpm::commands::remove_repository::remove_repository(matches)
         }
         _ => {}
     }

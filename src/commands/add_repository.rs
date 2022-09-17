@@ -1,20 +1,17 @@
 use crate::git::clone::clone;
 use crate::util::structs::{RTPMConfig, RepositoryManifest};
-use crate::util::utils::save_json_to_file;
+use crate::util::utils::{read_json_file, save_json_to_file};
 use clap::ArgMatches;
-use colored::*;
+use colored::Colorize;
 use std::path::PathBuf;
 
-pub fn add_repository(matches: ArgMatches) {
+pub fn add_repository(matches: &ArgMatches) {
     let repository: &str = matches.get_one::<String>("repository").unwrap_or_else(|| {
         println!("{}", "You have not filled a repository.".red().bold());
         std::process::exit(22);
     });
     let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
-    let mut rtpm_config: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(rtpm_config_path.clone()).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
+    let mut rtpm_config: RTPMConfig = read_json_file(&rtpm_config_path);
 
     let repositories_path: PathBuf = dirs::data_dir().unwrap().join("rtop").join("repositories");
     let temp_path: PathBuf = repositories_path.join("temp");
@@ -26,7 +23,7 @@ pub fn add_repository(matches: ArgMatches) {
 
     println!(":: {}", "Downloading the repository...".green());
 
-    clone(repository.to_owned(), &temp_path);
+    clone(repository, &temp_path);
 
     let manifest_path: PathBuf = temp_path.join("manifest.json");
 
@@ -41,10 +38,7 @@ pub fn add_repository(matches: ArgMatches) {
         std::process::exit(22);
     }
 
-    let repository_manifest: RepositoryManifest = serde_json::from_str(
-        &std::fs::read_to_string(manifest_path).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
+    let repository_manifest: RepositoryManifest = read_json_file(&manifest_path);
 
     if rtpm_config.repositories.contains(&repository_manifest.id) {
         println!(

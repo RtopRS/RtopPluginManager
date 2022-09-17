@@ -1,8 +1,9 @@
 use crate::util::structs::PluginManifest;
 use crate::util::structs::{RTPMConfig, RepositoryPlugin};
-use colored::*;
+use colored::Colorize;
 use serde::Serialize;
-use std::path::PathBuf;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use url::Url;
 
 // Based on the human_bytes library of Forkbomb9: https://gitlab.com/forkbomb9/human_bytes-rs.
@@ -12,7 +13,7 @@ pub fn convert_to_readable_unity<T: Into<f64>>(size: T) -> String {
     if size_converted <= 0.0_f64 {
         return "0 B".to_owned();
     }
-    let base: f64 = size_converted.log10() / 1024_f64.log10();
+    let base: f64 = size_converted.log(1024_f64);
     let mut result: String = format!("{:.1}", 1024_f64.powf(base - base.floor()))
         .trim_end_matches(".0")
         .to_owned();
@@ -20,7 +21,7 @@ pub fn convert_to_readable_unity<T: Into<f64>>(size: T) -> String {
     result
 }
 
-pub fn build_cargo_project(toml_path: PathBuf) {
+pub fn build_cargo_project(toml_path: &PathBuf) -> bool {
     use cargo::core::{compiler::CompileMode, Workspace};
     use cargo::ops::CompileOptions;
     use cargo::util::interning::InternedString;
@@ -31,34 +32,26 @@ pub fn build_cargo_project(toml_path: PathBuf) {
     let mut compile_options: CompileOptions =
         CompileOptions::new(&config, CompileMode::Build).unwrap();
     compile_options.build_config.requested_profile = InternedString::new("release");
-    cargo::ops::compile(&workspace, &compile_options).unwrap();
+    return cargo::ops::compile(&workspace, &compile_options).is_ok();
 }
 
-pub fn get_raw_url(url: Url) -> Option<Url> {
+pub fn get_raw_url(url: &Url) -> Option<Url> {
     let url_host: &str = url.host_str().unwrap();
     let url_path: &str = url.path();
-    let url_split: Vec<String> = url_path
-        .split('/')
-        .filter(|&s| !s.is_empty())
-        .collect::<Vec<&str>>()
-        .into_iter()
-        .map(|s| s.to_owned())
-        .collect();
+    let url_split: Vec<&str> = url_path.split('/').filter(|&s| !s.is_empty()).collect();
 
     match url_host {
         "github.com" => Option::from(
             Url::parse(&format!(
                 "https://raw.githubusercontent.com/{}/{}/main/",
-                url_split[0].clone(),
-                url_split[1].clone()
+                url_split[0], url_split[1]
             ))
             .unwrap(),
         ),
         "gitlab.com" => Option::from(
             Url::parse(&format!(
                 "https://gitlab.com/{}/{}/-/raw/main/",
-                url_split[0].clone(),
-                url_split[1].clone()
+                url_split[0], url_split[1]
             ))
             .unwrap(),
         ),
@@ -69,9 +62,9 @@ pub fn get_raw_url(url: Url) -> Option<Url> {
     }
 }
 pub fn search_plugin(
-    plugin_name: String,
+    plugin_name: &str,
     mut rtpm_config: RTPMConfig,
-    rtpm_config_path: PathBuf,
+    rtpm_config_path: &Path,
     print_if_found: bool,
 ) -> Option<PathBuf> {
     let mut repository_path_opt: Option<PathBuf> = None;
@@ -96,15 +89,11 @@ pub fn search_plugin(
                 .position(|r| r == &repository)
                 .unwrap();
             rtpm_config.repositories.remove(index);
-            save_json_to_file(&rtpm_config, rtpm_config_path.clone());
+            save_json_to_file(&rtpm_config, rtpm_config_path.to_path_buf());
             continue;
         }
-        let repository_plugins: RepositoryPlugin = serde_json::from_str(
-            &std::fs::read_to_string(path.join("plugins.json"))
-                .unwrap_or_else(|_| "{}".to_string()),
-        )
-        .unwrap();
-        if repository_plugins.plugins.contains(&plugin_name) {
+        let repository_plugins: RepositoryPlugin = read_json_file(&path.join("plugins.json"));
+        if repository_plugins.plugins.contains(&plugin_name.to_owned()) {
             if print_if_found {
                 println!(
                     ":: {}",
@@ -138,6 +127,14 @@ where
     );
 }
 
+pub fn read_json_file<T>(path: &PathBuf) -> T
+where
+    for<'a> T: serde::Deserialize<'a>,
+{
+    serde_json::from_str(&std::fs::read_to_string(path).unwrap_or_else(|_| "{}".to_owned()))
+        .unwrap()
+}
+
 pub fn verify_device_specification(plugin_manifest: &PluginManifest) -> bool {
     if let Some(os) = &plugin_manifest.os {
         return !(!os.is_empty() && !os.contains(&std::env::consts::OS.to_owned()));
@@ -148,4 +145,34 @@ pub fn verify_device_specification(plugin_manifest: &PluginManifest) -> bool {
     }
 
     true
+}
+
+pub fn contain_clap_arg(name: &str, matches: &clap::ArgMatches) -> bool {
+    matches
+        .get_one::<bool>(name)
+        .unwrap_or_else(|| {
+            println!(
+                "{}",
+                "A clap error occurred, please try again.".red().bold()
+            );
+            std::process::exit(22);
+        })
+        .to_owned()
+}
+
+pub fn user_input_choice() -> bool {
+    drop(std::io::stdout().flush());
+    let mut user_response: String = String::new();
+    std::io::stdin()
+        .read_line(&mut user_response)
+        .unwrap_or_else(|_| {
+            println!(
+                "{}",
+                "An error occurred while reading the user input."
+                    .red()
+                    .bold()
+            );
+            std::process::exit(22);
+        });
+    vec!["y", "yes", "ok", "o"].contains(&user_response.trim().to_lowercase().as_str())
 }

@@ -1,19 +1,16 @@
 use crate::util::structs::RTPMConfig;
-use crate::util::utils::save_json_to_file;
+use crate::util::utils::{read_json_file, save_json_to_file};
 use clap::ArgMatches;
-use colored::*;
+use colored::Colorize;
 use std::path::PathBuf;
 
-pub fn remove_repository(matches: ArgMatches) {
+pub fn remove_repository(matches: &ArgMatches) {
     let repository: &str = matches.get_one::<String>("repository").unwrap_or_else(|| {
         println!("{}", "You have not filled a repository.".red().bold());
         std::process::exit(22);
     });
     let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
-    let mut rtpm_config: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(rtpm_config_path.clone()).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
+    let mut rtpm_config: RTPMConfig = read_json_file(&rtpm_config_path);
     if !rtpm_config.repositories.contains(&repository.to_owned()) {
         println!(":: {}", "This repository is not installed!".red().bold());
         std::process::exit(9);

@@ -1,17 +1,17 @@
 use crate::util::structs::{RTPMConfig, RTPMConfigPluginElement, RtopConfig};
-use crate::util::utils::save_json_to_file;
+use crate::util::utils::{read_json_file, save_json_to_file};
 use clap::ArgMatches;
 use colored::Colorize;
 use itertools::Itertools;
 use std::path::PathBuf;
 
-pub fn uninstall(matches: ArgMatches) {
+pub fn uninstall(matches: &ArgMatches) {
     let plugins: Vec<String> = matches
         .get_many::<String>("plugins")
         .unwrap_or_else(|| {
             std::process::exit(0);
         })
-        .map(|s| s.to_owned())
+        .cloned()
         .unique()
         .collect();
 
@@ -23,15 +23,9 @@ pub fn uninstall(matches: ArgMatches) {
 
     let config_dir: PathBuf = dirs::config_dir().unwrap().join("rtop");
     let rtpm_config_path: PathBuf = config_dir.join("rtpm.json");
-    let mut rtpm_config: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(rtpm_config_path.clone()).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
-    let rtop_config_path: PathBuf = config_dir.join("config");
-    let mut rtop_config: RtopConfig = serde_json::from_str(
-        &std::fs::read_to_string(rtop_config_path.clone()).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
+    let mut rtpm_config: RTPMConfig = read_json_file(&rtpm_config_path);
+    let rtop_config_path: PathBuf = config_dir.join("config.json");
+    let mut rtop_config: RtopConfig = read_json_file(&rtop_config_path);
     let plugins_path: PathBuf = dirs::data_dir().unwrap().join("rtop").join("plugins");
 
     for plugin in plugins {

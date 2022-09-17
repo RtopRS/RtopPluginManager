@@ -1,7 +1,7 @@
 // Code based on the git2-rs example available on the URL: https://github.com/rust-lang/git2-rs/blob/master/examples/clone.rs.
 
 use crate::util::utils::convert_to_readable_unity;
-use colored::*;
+use colored::Colorize;
 use git2::build::{CheckoutBuilder, RepoBuilder};
 use git2::{FetchOptions, Progress, RemoteCallbacks};
 use std::cell::{RefCell, RefMut};
@@ -31,7 +31,7 @@ fn print(state: &mut State) {
             print!(
                 ":: {}",
                 format!("Checkout {}/{}...\r", state.current, state.total).green(),
-            )
+            );
         }
     } else {
         print!(
@@ -44,12 +44,12 @@ fn print(state: &mut State) {
                 stats.total_objects()
             )
             .green(),
-        )
+        );
     }
     io::stdout().flush().unwrap();
 }
 
-pub fn clone(url: String, path: &Path) {
+pub fn clone(url: &str, path: &Path) {
     let state: RefCell<State> = RefCell::new(State {
         progress: None,
         total: 0,
@@ -58,18 +58,18 @@ pub fn clone(url: String, path: &Path) {
     });
     let mut cb: RemoteCallbacks = RemoteCallbacks::new();
     cb.transfer_progress(|stats| {
-        let mut state = state.borrow_mut();
-        state.progress = Some(stats.to_owned());
-        print(&mut state);
+        let mut state_borrowed = state.borrow_mut();
+        state_borrowed.progress = Some(stats.to_owned());
+        print(&mut state_borrowed);
         true
     });
 
     let mut co: CheckoutBuilder = CheckoutBuilder::new();
     co.progress(|_, cur, total| {
-        let mut state: RefMut<State> = state.borrow_mut();
-        state.current = cur;
-        state.total = total;
-        print(&mut state);
+        let mut state_borrowed: RefMut<State> = state.borrow_mut();
+        state_borrowed.current = cur;
+        state_borrowed.total = total;
+        print(&mut state_borrowed);
     });
 
     let mut fo = FetchOptions::new();
@@ -77,6 +77,6 @@ pub fn clone(url: String, path: &Path) {
     RepoBuilder::new()
         .fetch_options(fo)
         .with_checkout(co)
-        .clone(url.as_str(), path)
+        .clone(url, path)
         .unwrap();
 }

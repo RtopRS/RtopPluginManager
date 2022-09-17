@@ -1,8 +1,8 @@
 use crate::git::clone::clone;
 use crate::git::pull::{do_fetch, do_merge};
 use crate::util::structs::{RTPMConfig, RepositoryManifest};
-use crate::util::utils::save_json_to_file;
-use colored::*;
+use crate::util::utils::{read_json_file, save_json_to_file};
+use colored::Colorize;
 use git2::{Remote, Repository};
 use std::fs::DirEntry;
 use std::path::PathBuf;
@@ -24,29 +24,23 @@ pub fn update_repositories() {
         must_update_rtop = false;
 
         clone(
-            "https://github.com/RtopRS/PluginsRepository/".to_owned(),
+            "https://github.com/RtopRS/PluginsRepository/",
             &repositories_path.join("rtop"),
-        )
+        );
     }
 
     let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
-    let mut rtpm_config: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(&rtpm_config_path).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
+    let mut rtpm_config: RTPMConfig = read_json_file(&rtpm_config_path);
 
-    for repository in std::fs::read_dir(repositories_path).unwrap() {
-        let repository: &DirEntry = repository.as_ref().unwrap();
+    for repository_result in std::fs::read_dir(repositories_path).unwrap() {
+        let repository: &DirEntry = repository_result.as_ref().unwrap();
 
         let folder_name: String = repository.file_name().into_string().unwrap();
         if !must_update_rtop && repository.file_name() == "rtop" {
             continue;
         }
-        let repo_manifest: RepositoryManifest = serde_json::from_str(
-            &std::fs::read_to_string(&repository.path().join("manifest.json"))
-                .unwrap_or_else(|_| "{}".to_string()),
-        )
-        .unwrap();
+        let repo_manifest: RepositoryManifest =
+            read_json_file(&repository.path().join("manifest.json"));
         println!(
             ":: {}",
             format!(
@@ -70,7 +64,7 @@ pub fn update_repositories() {
         let repo: Repository = Repository::open(repository.path()).unwrap();
         let mut remote: Remote = repo.find_remote("origin").unwrap();
         let fetch_commit = do_fetch(&repo, &["main"], &mut remote).unwrap();
-        do_merge(&repo, "main", fetch_commit).unwrap();
+        do_merge(&repo, "main", &fetch_commit).unwrap();
         println!(
             ":: {}",
             format!(

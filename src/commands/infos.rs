@@ -1,7 +1,7 @@
 use crate::util::structs::{PluginManifest, RTPMConfig, RepositoryManifest};
-use crate::util::utils::search_plugin;
+use crate::util::utils::{contain_clap_arg, read_json_file, search_plugin};
 use clap::ArgMatches;
-use colored::*;
+use colored::Colorize;
 use itertools::Itertools;
 use std::path::PathBuf;
 
@@ -36,11 +36,8 @@ fn repository_infos(repositories: Vec<String>) {
             continue;
         }
 
-        let repo_manifest: RepositoryManifest = serde_json::from_str(
-            &std::fs::read_to_string(repository_path.join("manifest.json"))
-                .unwrap_or_else(|_| "{}".to_string()),
-        )
-        .unwrap();
+        let repo_manifest: RepositoryManifest =
+            read_json_file(&repository_path.join("manifest.json"));
 
         let mut fallback_url: String = repo_manifest
             .fallback_url
@@ -77,16 +74,13 @@ fn plugin_infos(plugins: Vec<String>) {
 
     let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
 
-    let rtpm_config: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(rtpm_config_path.clone()).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
+    let rtpm_config: RTPMConfig = read_json_file(&rtpm_config_path);
 
     for plugin in plugins {
         let repository_path: PathBuf = if let Some(repository_path) = search_plugin(
-            plugin.clone(),
+            plugin.as_str(),
             rtpm_config.clone(),
-            rtpm_config_path.clone(),
+            &rtpm_config_path,
             false,
         ) {
             repository_path
@@ -100,15 +94,11 @@ fn plugin_infos(plugins: Vec<String>) {
             continue;
         };
 
-        let plugin_manifest: PluginManifest = serde_json::from_str(
-            &std::fs::read_to_string(
-                repository_path
-                    .join("plugins")
-                    .join(format!("{}.json", plugin)),
-            )
-            .unwrap_or_else(|_| "{}".to_string()),
-        )
-        .unwrap();
+        let plugin_manifest: PluginManifest = read_json_file(
+            &repository_path
+                .join("plugins")
+                .join(format!("{}.json", plugin)),
+        );
 
         let mut to_print: String = format!(
             "{} {}\n{} {}\n{} {}\n{} {}\n{} {}\n",
@@ -176,10 +166,7 @@ fn plugin_infos(plugins: Vec<String>) {
 
 fn plugin_list() {
     let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
-    let rtpm_config: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(rtpm_config_path).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
+    let rtpm_config: RTPMConfig = read_json_file(&rtpm_config_path);
 
     let mut plugins_list: String = String::new();
     for plugin in rtpm_config.plugins {
@@ -194,7 +181,7 @@ fn plugin_list() {
         );
     }
     if plugins_list.is_empty() {
-        println!("{}", "No plugin is installed.".red().bold())
+        println!("{}", "No plugin is installed.".red().bold());
     } else {
         println!("{}", plugins_list);
     }
@@ -202,10 +189,7 @@ fn plugin_list() {
 
 fn repositories_list() {
     let rtpm_config_path: PathBuf = dirs::config_dir().unwrap().join("rtop").join("rtpm.json");
-    let rtpm_config: RTPMConfig = serde_json::from_str(
-        &std::fs::read_to_string(rtpm_config_path).unwrap_or_else(|_| "{}".to_string()),
-    )
-    .unwrap();
+    let rtpm_config: RTPMConfig = read_json_file(&rtpm_config_path);
 
     let mut repositories_list: String = String::new();
     for repository in rtpm_config.repositories {
@@ -215,10 +199,7 @@ fn repositories_list() {
             .join("repositories")
             .join(repository)
             .join("manifest.json");
-        let repository_manifest: RepositoryManifest = serde_json::from_str(
-            &std::fs::read_to_string(repository_path).unwrap_or_else(|_| "{}".to_string()),
-        )
-        .unwrap();
+        let repository_manifest: RepositoryManifest = read_json_file(&repository_path);
 
         repositories_list.push_str(
             format!(
@@ -230,25 +211,16 @@ fn repositories_list() {
         );
     }
     if repositories_list.is_empty() {
-        println!("{}", "No repository is present.".red().bold())
+        println!("{}", "No repository is present.".red().bold());
     } else {
         println!("{}", repositories_list);
     }
 }
 
-pub fn infos(matches: ArgMatches) {
-    let plugin_arg: bool = matches
-        .get_one::<bool>("plugin")
-        .expect("Defaulted by clap")
-        .to_owned();
-    let repository_arg: bool = matches
-        .get_one::<bool>("repository")
-        .expect("Defaulted by clap")
-        .to_owned();
-    let list_arg: bool = matches
-        .get_one::<bool>("list")
-        .expect("Defaulted by clap")
-        .to_owned();
+pub fn infos(matches: &ArgMatches) {
+    let plugin_arg: bool = contain_clap_arg("plugin", matches);
+    let repository_arg: bool = contain_clap_arg("repository", matches);
+    let list_arg: bool = contain_clap_arg("list", matches);
 
     if repository_arg && list_arg {
         repositories_list();
@@ -266,7 +238,7 @@ pub fn infos(matches: ArgMatches) {
                 );
                 std::process::exit(22);
             })
-            .map(|s| s.to_owned())
+            .cloned()
             .unique()
             .collect();
 
