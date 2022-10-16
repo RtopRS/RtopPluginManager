@@ -68,8 +68,13 @@ pub fn uninstall(matches: &ArgMatches) {
             .plugins
             .iter()
             .position(|r| {
-                r.path
-                    .starts_with(&plugin_path.clone().into_os_string().into_string().unwrap())
+                r.path.starts_with(
+                    &plugin_path
+                        .join("target")
+                        .into_os_string()
+                        .into_string()
+                        .unwrap(),
+                )
             })
             .unwrap();
         rtop_config.plugins.remove(rtop_plugin_index);

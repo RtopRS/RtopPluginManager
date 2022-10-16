@@ -3,7 +3,7 @@ use crate::git::pull::{do_fetch, do_merge};
 use crate::util::structs::{RTPMConfig, RepositoryManifest};
 use crate::util::utils::{read_json_file, save_json_to_file};
 use colored::Colorize;
-use git2::{Remote, Repository};
+use git2::{AnnotatedCommit, Remote, Repository};
 use std::fs::DirEntry;
 use std::path::PathBuf;
 
@@ -63,8 +63,45 @@ pub fn update_repositories() {
 
         let repo: Repository = Repository::open(repository.path()).unwrap();
         let mut remote: Remote = repo.find_remote("origin").unwrap();
-        let fetch_commit = do_fetch(&repo, &["main"], &mut remote).unwrap();
-        do_merge(&repo, "main", &fetch_commit).unwrap();
+        let fetch = do_fetch(&repo, &["main"], &mut remote).0;
+        let fetch_commit: AnnotatedCommit = if let Err(error) = fetch {
+            println!(
+                ":: {}",
+                format!(
+                    "An error occurred while fetching the repository: {}",
+                    error.message()
+                )
+                .red()
+                .bold()
+            );
+            continue;
+        } else {
+            fetch.unwrap()
+        };
+        if let Err(error) = do_merge(&repo, "main", &fetch_commit) {
+            if error.message() == "no merge base found" {
+                println!(
+                    ":: {}",
+                    "Unable to update the repository, re-installation..."
+                        .red()
+                        .bold()
+                );
+                std::fs::remove_dir_all(repository.path()).unwrap();
+                clone(&repo_manifest.url, &repository.path());
+                println!(":: {}", "Repository re-installed!".green());
+            } else {
+                println!(
+                    ":: {}",
+                    format!(
+                        "An error occurred while merging the repository: {}",
+                        error.message()
+                    )
+                    .red()
+                    .bold()
+                );
+            }
+            continue;
+        }
         println!(
             ":: {}",
             format!(

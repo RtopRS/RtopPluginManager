@@ -11,7 +11,6 @@ license = "MPL-2.0"
 
 [profile.release]
 codegen-units = 1
-panic = "abort"
 strip = true
 lto = true
 
@@ -32,14 +31,15 @@ assets = [
 rtop = "*"
 
 [dependencies]
-reqwest = { version = "0.11", features = ["blocking", "json"] }
-openssl = { version = "^0.10.41", features = ["vendored"] }
-serde = { version = "1.0", features = ["derive"] }
-itertools = "0.10"
-serde_json = "1.0"
-colored = "2.0"
-cargo = "0.64"
-git2 = "0.14.2"
+reqwest = { version = "0.11.12", features = ["blocking", "json"] }
+openssl = { version = "^0.10.42", features = ["vendored"] }
+serde = { version = "1.0.145", features = ["derive"] }
+serde_json = "1.0.86"
+itertools = "0.10.5"
+colored = "2.0.0"
+cargo = "0.65.0"
+git2 = "0.14.0"
+dirs = "4.0.0"
+url = "2.3.1"
 clap = "3.2"
-dirs = "4.0"
-url = "2.2"
+

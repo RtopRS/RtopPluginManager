@@ -13,7 +13,7 @@ pub fn do_fetch<'a>(
     repo: &'a Repository,
     refs: &[&str],
     remote: &'a mut git2::Remote,
-) -> Result<AnnotatedCommit<'a>, git2::Error> {
+) -> (Result<AnnotatedCommit<'a>, git2::Error>, bool) {
     let mut cb: RemoteCallbacks = RemoteCallbacks::new();
 
     cb.transfer_progress(|stats| {
@@ -48,11 +48,13 @@ pub fn do_fetch<'a>(
     let mut fo: FetchOptions = FetchOptions::new();
     fo.remote_callbacks(cb);
     fo.download_tags(git2::AutotagOption::All);
-    remote.fetch(refs, Some(&mut fo), None)?;
+    remote.fetch(refs, Some(&mut fo), None).unwrap();
 
+    let mut updated: bool = true;
     let stats: Progress = remote.stats();
     if stats.total_objects() == 0 {
         println!(":: {}", "No updates available for this repository.".green());
+        updated = false;
     } else {
         println!(
             ":: {}",
@@ -66,8 +68,8 @@ pub fn do_fetch<'a>(
         );
     }
 
-    let fetch_head: Reference = repo.find_reference("FETCH_HEAD")?;
-    repo.reference_to_annotated_commit(&fetch_head)
+    let fetch_head: Reference = repo.find_reference("FETCH_HEAD").unwrap();
+    (repo.reference_to_annotated_commit(&fetch_head), updated)
 }
 
 fn fast_forward(
