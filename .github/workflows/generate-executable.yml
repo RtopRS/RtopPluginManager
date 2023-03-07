@@ -5,94 +5,88 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  generate-linux-executables:
-    name: Build & publish for ${{ matrix.name }}
-    runs-on: ubuntu-latest
+  generate-linux-freebsd-executables:
+    name: Build & publish for ${{ matrix.target }}
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
-        name: [aarch64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, i686-unknown-linux-gnu, i686-unknown-linux-musl, mips-unknown-linux-gnu, mips64-unknown-linux-gnuabi64, mips64el-unknown-linux-gnuabi64, mipsel-unknown-linux-gnu, powerpc-unknown-linux-gnu, powerpc64-unknown-linux-gnu, powerpc64le-unknown-linux-gnu, arm-unknown-linux-gnueabi,x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl]
+        rust:
+          - stable
+        target:
+          - x86_64-unknown-freebsd
+          - i686-unknown-freebsd
+          - aarch64-unknown-linux-gnu
+          - arm-unknown-linux-gnueabi
+          - armv7-unknown-linux-gnueabi
+          - armv7-unknown-linux-gnueabihf
+          - i586-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+          - mips-unknown-linux-gnu
+          - mips64-unknown-linux-gnuabi64
+          - mips64el-unknown-linux-gnuabi64
+          - mipsel-unknown-linux-gnu
+          - powerpc-unknown-linux-gnu
+          - powerpc64-unknown-linux-gnu
+          - powerpc64le-unknown-linux-gnu
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - i686-unknown-linux-musl
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust
+        run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
+
+      - name: Install cross-compilation tools
+        uses: Asthowen/setup-cross-toolchain-action@main
         with:
-          profile: minimal
+          target: ${{ matrix.target }}
+        if: matrix.target != 'i686-unknown-linux-musl' && matrix.target != 'x86_64-unknown-linux-musl'
+
+      - name: Installing dependencies for i686-unknown-linux-musl & x86_64-unknown-linux-musl
+        run: sudo apt update && sudo apt install musl-dev musl-tools -y
+        if: matrix.target == 'i686-unknown-linux-musl' || matrix.target == 'x86_64-unknown-linux-musl'
+
+      - name: Install toolchain for i686-unknown-linux-musl & x86_64-unknown-linux-musl
+        uses: dtolnay/rust-toolchain@stable
+        with:
           toolchain: stable
-          target: ${{ matrix.name }}
+          targets: ${{ matrix.target }}
+        if: matrix.target == 'i686-unknown-linux-musl' || matrix.target == 'x86_64-unknown-linux-musl'
+
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
       - name: Get RTPM version
         id: rtpm_version
-        run: echo "::set-output name=APP_VERSION::$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)"
+        run: echo "APP_VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)" >> $GITHUB_OUTPUT
 
-      - name: Use GitHub cache
-        uses: actions/cache@v2
+      - name: Build release
+        run: |
+          cargo build --release --locked --target ${{ matrix.target }}
+          mv ./target/${{ matrix.target }}/release/rtpm ./rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-${{ matrix.target }}
+
+      - name: Upload executable to release
+        uses: softprops/action-gh-release@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build
-        run: cargo build --release --locked
-
-      - name: Upload executable to releases
-        uses: Asthowen/UploadReleaseAsset@main
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          release_tag: ${{ steps.rtpm_version.outputs.APP_VERSION }}
-          asset_path: ./target/release/rtpm
-          asset_name: rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-${{ matrix.name }}
-          asset_content_type: application/octet-stream
-
-  generate-windows-executables:
-    name: Build & publish for ${{ matrix.name }}
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        name: [i686-pc-windows-gnu, x86_64-pc-windows-gnu, x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: ${{ matrix.name }}
-
-      - name: Get RTPM version
-        id: rtpm_version
-        run: echo "::set-output name=APP_VERSION::$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)"
-
-      - name: Use GitHub cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build
-        run: cargo build --release --locked
-
-      - name: Upload executable to releases
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          release_tag: ${{ steps.rtpm_version.outputs.APP_VERSION }}
-          asset_path: ./target/release/rtpm.exe
-          asset_name: rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-${{ matrix.name }}.exe
-          asset_content_type: application/octet-stream
+          files: rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-${{ matrix.target }}
+          tag_name: ${{ steps.rtpm_version.outputs.APP_VERSION }}
 
   generate-macos-executables:
     name: Build & publish for ${{ matrix.name }}
@@ -100,40 +94,40 @@ jobs:
     strategy:
       matrix:
         name: [x86_64-apple-darwin, aarch64-apple-darwin]
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          target: ${{ matrix.name }}
+          targets: ${{ matrix.name }}
 
       - name: Get RtopPluginManager version
         id: rtpm_version
-        run: echo "::set-output name=APP_VERSION::$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)"
+        run: echo "APP_VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/["]/, "", $2); printf("%s",$2) }' Cargo.toml)" >> $GITHUB_OUTPUT
 
-      - name: Use GitHub cache
-        uses: actions/cache@v2
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Build
-        run: cargo build --release --locked
+      - name: Build release
+        run: |
+          cargo build --release --locked --target ${{ matrix.name }}
+          mv ./target/${{ matrix.name }}/release/rtpm ./rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-${{ matrix.name }}
 
-      - name: Upload executable to releases
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      - name: Upload executable to release
+        uses: softprops/action-gh-release@v1
         with:
-          release_tag: ${{ steps.rtpm_version.outputs.APP_VERSION }}
-          asset_path: ./target/release/rtpm
-          asset_name: rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-${{ matrix.name }}
-          asset_content_type: application/octet-stream
+          files: rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-${{ matrix.name }}
+          tag_name: ${{ steps.rtpm_version.outputs.APP_VERSION }}

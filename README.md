@@ -8,10 +8,6 @@
     <a href="https://www.rust-lang.org/">
         <img src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white" alt="Made with Rust">
     </a>
-    <a href="https://github.com/RtopRS/RtopPluginManager">
-        <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white" alt="Use git">
-    </a>
-    <br>
     <a href="https://github.com/RtopRS/RtopPluginManager/blob/main/LICENSE">
         <img src="https://img.shields.io/github/license/RtopRS/RtopPluginManager?style=for-the-badge" alt="License">
     </a>
