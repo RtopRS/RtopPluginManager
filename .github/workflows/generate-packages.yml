@@ -33,7 +33,7 @@ jobs:
         run: |
           sudo chmod -R 777 ./target
           mv ./target/x86_64-unknown-linux-musl/debian/rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_amd64.deb ./rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_amd64.deb
-          mv ./target/armv7-unknown-linux-musleabih/debian/rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_armhf.deb ./rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_arm.deb
+          mv ./target/armv7-unknown-linux-musleabihf/debian/rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_armhf.deb ./rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_armv7.deb
           mv ./target/generate-rpm/rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-1.x86_64.rpm ./rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-1.x86_64.rpm
 
       - name: Upload executables to release
@@ -42,5 +42,5 @@ jobs:
           tag_name: ${{ steps.rtpm_version.outputs.APP_VERSION }}
           files: |
             rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_amd64.deb
-            rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_arm.deb
+            rtpm_${{ steps.rtpm_version.outputs.APP_VERSION }}_armv7.deb
             rtpm-${{ steps.rtpm_version.outputs.APP_VERSION }}-1.x86_64.rpm
